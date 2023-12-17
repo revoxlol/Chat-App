@@ -1,5 +1,5 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/user.dto';
@@ -23,20 +23,27 @@ export class AuthService {
     throw new UnauthorizedException('Invalid credentials');
   }
 
-  async login(user: any) {
+  async login(user: any): Promise<string> {
     const payload = { username: user.username, sub: user.userId };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    return this.jwtService.sign(payload); 
   }
 
   async register(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    const user = await this.userService.createUser(
-      createUserDto.username,
-      hashedPassword,
-    );
-    const { password, ...result } = user;
+    const { username, password } = createUserDto;
+
+    // Check if the user already exists
+    const existingUser = await this.userService.findUserByUsername(username);
+    if (existingUser) {
+      throw new ConflictException('User with this username already exists');
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the user
+    const user = await this.userService.createUser(username, hashedPassword);
+
+    const { password: _, ...result } = user;
     return result;
   }
 }
