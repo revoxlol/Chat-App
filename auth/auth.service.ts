@@ -31,16 +31,15 @@ export class AuthService {
   async register(createUserDto: CreateUserDto) {
     const { username, password } = createUserDto;
 
-    // Check if the user already exists
+    
     const existingUser = await this.userService.findUserByUsername(username);
     if (existingUser) {
       throw new ConflictException('User with this username already exists');
     }
 
-    // Hash the password
+ 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user
     const user = await this.userService.createUser(username, hashedPassword);
 
     const { password: _, ...result } = user;
